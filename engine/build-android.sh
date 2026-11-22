@@ -56,10 +56,18 @@ io=(src/io/raw_decoder.cpp src/io/raw_headroom.cpp src/io/image_writer.cpp)
 
 mkdir -p "$out/obj"
 jobfile="$out/jobs.txt"; : > "$jobfile"
+# No dependency files here, so a changed engine header recompiles every engine object (not LibRaw's): checking
+# only the .cpp once left most objects on an old Gpu vtable after gpu.hpp gained a method, and the host failed
+# every open with a nonsense "upload size must be 4-byte aligned (9 bytes)" (2026-11-22).
+newest_header="$(find "$E/src" "$E/include" "$E/host" -name '*.h' -o -name '*.hpp' -o -name '*.inc' | xargs ls -t | head -1)"
 add() {  # obj src flags...
   local obj="$out/obj/$1" src="$2"; shift 2
   objs+=("$obj")
-  [[ "$obj" -nt "$src" ]] && return 0
+  if [[ "$src" == "$LIBRAW"/* ]]; then
+    [[ "$obj" -nt "$src" ]] && return 0
+  else
+    [[ "$obj" -nt "$src" && "$obj" -nt "$newest_header" ]] && return 0
+  fi
   printf '%q ' "$@" -c "$src" -o "$obj" >> "$jobfile"; echo >> "$jobfile"
 }
 objs=()
@@ -121,6 +129,13 @@ if [[ -x "$G" ]]; then
   res="$out/engine"
   mkdir -p "$res/vulkan"
   cp -a "$E/resources/." "$res/"
+  # Develop's own profiles (the data-sheet films, black and white, Portra NC/VC, CineStill, Multigrade) beside
+  # spektrafilm's, as stage-host.sh does for Linux: without them choosing one fails with "no profile '...'".
+  if [[ -d "$E/resources_product/profiles" ]]; then
+    cp "$E/resources_product/profiles/"*.json "$res/profiles/"
+    cp "$E/resources_product/NOTICE.md" "$res/PRODUCT_PROFILES_NOTICE.md"
+    cp "$E/resources_product/neutral_print_filters_colour.json" "$res/"
+  fi
   mapfile -t kernels < <(sed -n '/set(SPEKTRALAB_VULKAN_KERNELS/,/CACHE INTERNAL/p' "$E/CMakeLists.txt" |
                          grep -o 'spk_[a-z0-9_]*')
   for k in "${kernels[@]}"; do

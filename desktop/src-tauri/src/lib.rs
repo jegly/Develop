@@ -157,6 +157,45 @@ fn ensure_dir(path: String) -> Result<(), String> {
     std::fs::create_dir_all(&p).map_err(|e| format!("{path}: {e}"))
 }
 
+/// Android's Import: the app's own Kotlin plugin (gen/android/.../PhotoImportPlugin.kt) opens Android's
+/// picker and copies the chosen photographs into app storage, so the rest of the app gets real paths.
+#[cfg(target_os = "android")]
+mod android_import {
+    pub struct Importer(pub tauri::plugin::PluginHandle<tauri::Wry>);
+
+    pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+        tauri::plugin::Builder::new("photo-import")
+            .setup(|app, api| {
+                use tauri::Manager;
+                let handle = api.register_android_plugin("io.github.jegly.develop", "PhotoImportPlugin")?;
+                app.manage(Importer(handle));
+                Ok(())
+            })
+            .build()
+    }
+}
+
+/// The photographs the user picked, as paths (empty if they cancelled). Android only: the desktop picks
+/// files with the dialog plugin.
+#[tauri::command]
+async fn pick_photos(app: AppHandle) -> Result<Vec<String>, String> {
+    #[cfg(target_os = "android")]
+    {
+        #[derive(serde::Deserialize)]
+        struct Picked {
+            paths: Vec<String>,
+        }
+        let importer = app.state::<android_import::Importer>();
+        let picked: Picked = importer.0.run_mobile_plugin_async("pickPhotos", ()).await.map_err(|e| e.to_string())?;
+        Ok(picked.paths)
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        Err("pick_photos is for Android".into())
+    }
+}
+
 #[tauri::command]
 fn take_launch_paths(state: State<'_, AppState>) -> Vec<String> {
     std::mem::take(&mut *state.launch_paths.lock().unwrap())
@@ -172,8 +211,22 @@ fn app_paths(app: AppHandle, state: State<'_, AppState>) -> Value {
         "home": p.home_dir().map(|d| d.display().to_string()).unwrap_or_default(),
         "pictures": p.picture_dir().map(|d| d.display().to_string()).unwrap_or_default(),
         "os": std::env::consts::OS,
+        // Android: where Import keeps the photographs (PhotoImportPlugin.kt: files/Photos, beside files/engine).
+        "photos": android_photos_dir(),
         "version": app.package_info().version.to_string(),
     })
+}
+
+fn android_photos_dir() -> Option<String> {
+    #[cfg(target_os = "android")]
+    {
+        let engine = std::env::var("DEVELOP_ANDROID_ENGINE").ok()?;
+        Some(PathBuf::from(engine).parent()?.join("Photos").display().to_string())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        None
+    }
 }
 
 /// The app's own origin: `tauri://localhost` on Linux, `http(s)://tauri.localhost` on Windows, and
@@ -253,6 +306,10 @@ pub fn run() {
     {
         builder = builder.plugin(tauri_plugin_window_state::Builder::default().build());
     }
+    #[cfg(target_os = "android")]
+    {
+        builder = builder.plugin(android_import::init());
+    }
     builder
         .setup(|app| {
             let handle = app.handle().clone();
@@ -291,6 +348,7 @@ pub fn run() {
             store_read,
             store_write,
             take_launch_paths,
+            pick_photos,
             path_exists,
             ensure_dir,
             app_paths,

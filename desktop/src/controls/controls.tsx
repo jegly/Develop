@@ -8,7 +8,7 @@
 // while dragging; `onCommit` on release.
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { clamp } from '@shared/params';
 import { settingsStore, useSettings } from '../state/settings';
 import { beginGesture } from '../state/session';
@@ -29,14 +29,20 @@ export interface SectionProps {
   unsupported?: string | null;
 }
 
+/** True where one section is shown on its own (the narrow-screen editor): it stays open. */
+export const SectionHeldOpen = createContext(false);
+
 export function Section({ id, title, children, trailing, onReset, resetHelp, resetEnabled = true, menu, unsupported }: SectionProps) {
-  const collapsed = useSettings((s) => !!s.collapsedSections[id]);
+  const heldOpen = useContext(SectionHeldOpen);
+  const collapsed = useSettings((s) => !!s.collapsedSections[id]) && !heldOpen;
   return (
     <section className={'section' + (unsupported ? ' unsupported' : '')} data-section={id}>
       <div className="section-header">
-        <button className={'disclosure' + (collapsed ? ' closed' : '')} onClick={() => settingsStore.getState().toggleSection(id)} aria-label={title}>
-          <Disclosure />
-        </button>
+        {!heldOpen && (
+          <button className={'disclosure' + (collapsed ? ' closed' : '')} onClick={() => settingsStore.getState().toggleSection(id)} aria-label={title}>
+            <Disclosure />
+          </button>
+        )}
         <span className="title" onDoubleClick={() => settingsStore.getState().toggleSection(id)}>
           {title}
         </span>
@@ -113,9 +119,10 @@ export function ScrubSlider(p: ScrubSliderProps) {
     beginGesture();
     // Click on the track jumps there; then the drag is relative.
     const v = lo + clamp((e.clientX - r.left) / r.width, 0, 1) * (hi - lo);
-    const start = e.detail > 1 ? value : v;
+    // A finger starts from where the slider is (a touch rarely lands exactly on the knob); a mouse jumps.
+    const start = e.detail > 1 || e.pointerType === 'touch' ? value : v;
     drag.current = { x: e.clientX, v: start, w: r.width };
-    if (e.detail <= 1) onChange(snapTo(start, e.shiftKey));
+    if (e.detail <= 1 && e.pointerType !== 'touch') onChange(snapTo(start, e.shiftKey));
   };
   const snapTo = (v: number, shift: boolean) => {
     let out = clamp(v, lo, hi);
