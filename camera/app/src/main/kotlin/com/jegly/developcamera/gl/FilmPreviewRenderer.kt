@@ -44,6 +44,8 @@ class FilmPreviewRenderer(
      * before the film and the gain) and a 32-bin histogram of what the film is given (summing to 1).
      */
     @Volatile var onMeter: ((Float, Float, FloatArray) -> Unit)? = null
+    /** The part of the viewfinder the next frame takes (width, height as fractions, centred): the meter reads only it. */
+    @Volatile var meterWindow = 1f to 1f
     @Volatile var bufferWidth = 1440
     @Volatile var bufferHeight = 1080
 
@@ -135,15 +137,22 @@ class FilmPreviewRenderer(
             GLES30.glReadPixels(0, 0, HIST_W, HIST_H, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, histPixels)
             GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
             GLES30.glViewport(0, 0, viewW, viewH)
-            val n = HIST_W * HIST_H
+            val (fw, fh) = meterWindow
+            val x0 = ((1f - fw) / 2f * HIST_W).toInt().coerceIn(0, HIST_W - 1)
+            val x1 = (HIST_W - x0).coerceAtLeast(x0 + 1)
+            val y0 = ((1f - fh) / 2f * HIST_H).toInt().coerceIn(0, HIST_H - 1)
+            val y1 = (HIST_H - y0).coerceAtLeast(y0 + 1)
+            val n = (x1 - x0) * (y1 - y0)
             val lum = FloatArray(n)
             val bins = FloatArray(32)
             val g = gain
-            for (i in 0 until n) {
+            var k = 0
+            for (py in y0 until y1) for (px in x0 until x1) {
+                val i = py * HIST_W + px
                 val y = 0.2126f * LINEAR[histPixels.get(4 * i).toInt() and 255] +
                     0.7152f * LINEAR[histPixels.get(4 * i + 1).toInt() and 255] +
                     0.0722f * LINEAR[histPixels.get(4 * i + 2).toInt() and 255]
-                lum[i] = y
+                lum[k++] = y
                 val shown = encode((y * g).coerceIn(0f, 1f))
                 bins[(shown * 31.99f).toInt().coerceIn(0, 31)] += 1f / n
             }

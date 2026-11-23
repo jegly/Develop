@@ -120,7 +120,7 @@ object PhotoSaver {
 
     /** The picture on the sensor's frame (sRGB-encoded scene light), from one or more shots. */
     fun compose(shots: List<Shot>, s: DevelopSettings): Bitmap {
-        val frames = shots.mapIndexed { i, shot -> crop(frame(shot), slotAspect(s, i)) }
+        val frames = shots.mapIndexed { i, shot -> slotAspect(s, i).let { a -> crop(frame(shot, a), a) } }
         return when {
             frames.size == 1 -> frames[0]
             s.format == Format.HALF_PAIR -> halfPair(frames)
@@ -190,10 +190,16 @@ object PhotoSaver {
         return Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).apply { setPixels(px, 0, w, 0, 0, w, h) }
     }
 
-    /** One shot on the sensor's frame: from its RAW (metered, straightened) when it has one, else its JPEG. */
-    private fun frame(shot: Shot): Bitmap {
+    /**
+     * One shot on the sensor's frame: from its RAW (metered, straightened) when it has one, else its JPEG. The RAW is
+     * cut to the frame's [aspect] there, so its brightness is matched over the same part of the picture the film
+     * meter read in the viewfinder (a triptych's long frame is a third of the sensor: metered over all of it, a
+     * bright top made the band nearly black, 2026-11-23).
+     */
+    private fun frame(shot: Shot, aspect: Double): Bitmap {
         val raw = shot.raw ?: return sensorOriented(shot, 1)
-        return runCatching { DevelopEngine.rawToBitmap(raw, shot.gain, shot.previewMedian) }.getOrElse { sensorOriented(shot, 1) }
+        return runCatching { DevelopEngine.rawToBitmap(raw, shot.gain, shot.previewMedian, aspect.toFloat()) }
+            .getOrElse { sensorOriented(shot, 1) }
     }
 
     /**

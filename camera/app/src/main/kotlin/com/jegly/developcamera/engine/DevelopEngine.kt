@@ -110,11 +110,12 @@ object DevelopEngine {
     }
 
     /** A RAW frame as an sRGB picture, metered and straightened, without film (any thread). */
-    fun rawToBitmap(raw: RawFrame, gain: Float, previewMedian: Float): Bitmap {
+    /** [cropAspect]: the frame's shape on the sensor (0 = all of it); the meter's median is matched over it. */
+    fun rawToBitmap(raw: RawFrame, gain: Float, previewMedian: Float, cropAspect: Float = 0f): Bitmap {
         library
         return nativeRawToBitmap(
             raw.data, raw.width, raw.height, raw.rowStride, raw.cfa, raw.black, raw.white, raw.neutral, raw.forward,
-            raw.shading, raw.shadingW, raw.shadingH, raw.distortion, raw.intrinsics, 0f, Int.MAX_VALUE, gain, previewMedian,
+            raw.shading, raw.shadingW, raw.shadingH, raw.distortion, raw.intrinsics, cropAspect, Int.MAX_VALUE, gain, previewMedian,
         )
     }
 

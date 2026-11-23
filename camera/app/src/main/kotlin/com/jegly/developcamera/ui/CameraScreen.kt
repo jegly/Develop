@@ -397,7 +397,11 @@ fun CameraScreen() {
                 )
                 ghost?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alpha = 0.38f) }
                 val slot = PhotoSaver.slotAspect(develop, pending.size)
-                FrameMask(if (pictureTall) 1.0 / slot else slot, app.grid, Modifier.fillMaxSize())
+                val shown = if (pictureTall) 1.0 / slot else slot
+                FrameMask(shown, app.grid, Modifier.fillMaxSize())
+                // The film meter reads what this frame will take, as FrameMask draws it (the box is 3:4 or 4:3).
+                val box = if (pictureTall) 3.0 / 4.0 else 4.0 / 3.0
+                renderer.meterWindow = if (shown > box) 1f to (box / shown).toFloat() else (shown / box).toFloat() to 1f
                 if (app.level) LevelLine(tilt, Modifier.fillMaxSize())
                 if (develop.frames > 1) FrameDots(develop.frames, pending.size, Modifier.align(Alignment.TopCenter).padding(top = 10.dp))
                 FilmChip(shownFilm, Modifier.align(Alignment.BottomStart).padding(10.dp))
