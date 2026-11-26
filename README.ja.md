@@ -90,7 +90,7 @@ Develop はインターネットに接続できません。他の何よりも先
 |---|---|
 | `main` | Linux 版 Develop と、すべてのアプリが土台にするエンジン |
 | `camera` | Develop Camera：Android 用のフィルムカメラ、`camera/` 内 |
-| `android` | Android 版の Develop エディター（開発中） |
+| `android` | Android 版の Develop エディター（ベータ版） |
 
 各アプリのブランチは `main` から始まるので、エンジンの修正はすべてに届きます。
 
@@ -110,18 +110,20 @@ Pixel 11 Pro Fold でテスト済みです。その GPU がエンジンのレン
 
 ## Android 版の Develop エディター
 
-Linux エディターの Android への移植で、`android` ブランチにあります。デスクトップのレイアウトを保ち、タッチ向けの修正を加えています。まだ使える状態ではありません。
+Linux エディターの Android への移植で、`android` ブランチにあり、ベータ版です。デスクトップのレイアウトを保ちつつ、スマートフォンの狭い画面用の独自レイアウトとタッチ向けの修正を加えています。写真（RAW を含む）を 130 種類すべてのフィルムで開いて編集し、`Pictures/Develop` に書き出せます。権限を一切求めず、ネットワークにも接続しません。レンズ補正は Android ではまだ使えません。
 
 ## インストール
 
 [最新リリース](https://github.com/jegly/Develop/releases/latest)から `.deb` か snap をダウンロードし、どちらかをインストールします：
 
 ```sh
-sudo apt install ./Develop_1.0.0_amd64.deb
-sudo snap install --dangerous ./develop_1.0.0_amd64.snap
+sudo apt install ./Develop_1.1.0_amd64.deb
+sudo snap install --dangerous ./develop_1.1.0_amd64.snap
 ```
 
 snap はファイルからインストールするため（Snap Store からではないため）`--dangerous` が必要です。ソースからビルドすることもできます（下記）。
+
+Android アプリも同じリリースにあります：`DevelopCamera-…-PQC-signed.apk` と `DevelopAndroid-…-PQC-signed.apk`。Vulkan 対応の 64 ビット Arm スマートフォンで Android 17 が必要で、テストは Pixel 11 Pro Fold でのみ行っています。
 
 Develop には Vulkan ドライバーのある GPU が必要です。Ubuntu 26.04 と Intel グラフィックス（Mesa）で開発されています。`.deb` は `libvulkan1`、`liblensfun1`、
 `liblensfun-data-v1`、`fonts-urw-base35`、`fonts-liberation-sans-narrow`、`fonts-dejavu-core` を導入します。snap はそれ自身のコピーを持っています。

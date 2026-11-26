@@ -103,7 +103,7 @@ saem da sua máquina.
 |---|---|
 | `main` | O Develop para Linux e o motor sobre o qual todos os aplicativos são construídos |
 | `camera` | Develop Camera: uma câmera de filme para Android, em `camera/` |
-| `android` | O editor do Develop no Android (em desenvolvimento) |
+| `android` | O editor do Develop no Android (beta) |
 
 Cada branch de aplicativo parte de `main`, então as correções do motor chegam a todos.
 
@@ -125,19 +125,24 @@ renderização com difusão; esses kernels estão corrigidos em `main`. Os passo
 
 ## O editor do Develop no Android
 
-Um port do editor do Linux para o Android, no branch `android`. Ele mantém o layout de desktop, com ajustes para toque.
-Ainda não está pronto para uso.
+Um port do editor do Linux para o Android, no branch `android`, em beta. Ele mantém o layout de desktop, com um
+layout próprio para a tela estreita de um celular e ajustes para toque. Abre e edita fotos (RAW incluído) com todos
+os 130 filmes e exporta para `Pictures/Develop`. Não pede nenhuma permissão e não tem acesso à rede. A correção de
+lente ainda não está disponível no Android.
 
 ## Instalação
 
 Baixe o `.deb` ou o snap da [versão mais recente](https://github.com/jegly/Develop/releases/latest) e instale um deles:
 
 ```sh
-sudo apt install ./Develop_1.0.0_amd64.deb
-sudo snap install --dangerous ./develop_1.0.0_amd64.snap
+sudo apt install ./Develop_1.1.0_amd64.deb
+sudo snap install --dangerous ./develop_1.1.0_amd64.snap
 ```
 
 O snap precisa de `--dangerous` porque é instalado a partir de um arquivo, e não da Snap Store. Ou compile a partir do código-fonte (abaixo).
+
+Os apps de Android estão na mesma versão: `DevelopCamera-…-PQC-signed.apk` e `DevelopAndroid-…-PQC-signed.apk`. Eles
+precisam do Android 17 em um celular Arm de 64 bits com Vulkan e só foram testados em um Pixel 11 Pro Fold.
 
 O Develop precisa de uma GPU com driver Vulkan. Ele foi desenvolvido no Ubuntu 26.04 com gráficos Intel (Mesa). O `.deb`
 instala `libvulkan1`, `liblensfun1`, `liblensfun-data-v1`, `fonts-urw-base35`, `fonts-liberation-sans-narrow` e

@@ -105,7 +105,7 @@ accounts. Your photos never leave your machine.
 |---|---|
 | `main` | Develop for Linux, and the engine every app builds on |
 | `camera` | Develop Camera: a film camera for Android, in `camera/` |
-| `android` | Develop's editor on Android (in progress) |
+| `android` | Develop's editor on Android (beta) |
 
 Each app branch starts from `main`, so engine fixes reach all of them.
 
@@ -127,19 +127,24 @@ render black; those kernels are fixed on `main`. Build steps are in `camera/BUIL
 
 ## Develop's editor on Android
 
-A port of the Linux editor to Android, on the `android` branch. It keeps the desktop layout, with fixes for touch.
-It is not ready to use yet.
+A port of the Linux editor to Android, on the `android` branch, in beta. It keeps the desktop layout, with a layout
+of its own for a phone's narrow screen and fixes for touch. It opens and edits photographs (RAW included) with all
+130 films and exports to `Pictures/Develop`. It asks for no permissions and has no network access. Lens correction
+is not available on Android yet.
 
 ## Install
 
 Download the `.deb` or the snap from the [latest release](https://github.com/jegly/Develop/releases/latest), then install one of them:
 
 ```sh
-sudo apt install ./Develop_1.0.0_amd64.deb
-sudo snap install --dangerous ./develop_1.0.0_amd64.snap
+sudo apt install ./Develop_1.1.0_amd64.deb
+sudo snap install --dangerous ./develop_1.1.0_amd64.snap
 ```
 
 The snap needs `--dangerous` because it is installed from a file, not from the Snap Store. Or build it from source (below).
+
+The Android apps are in the same release: `DevelopCamera-…-PQC-signed.apk` and `DevelopAndroid-…-PQC-signed.apk`.
+They need Android 17 on a 64-bit Arm phone with Vulkan, and have been tested only on a Pixel 11 Pro Fold.
 
 Develop needs a GPU with a Vulkan driver. It has been developed on Ubuntu 26.04 with Intel graphics
 (Mesa). The `.deb` pulls in `libvulkan1`, `liblensfun1`, `liblensfun-data-v1`, `fonts-urw-base35`,

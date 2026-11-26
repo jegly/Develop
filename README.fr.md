@@ -104,7 +104,7 @@ Vos photos ne quittent jamais votre machine.
 |---|---|
 | `main` | Develop pour Linux, et le moteur sur lequel reposent toutes les applications |
 | `camera` | Develop Camera : un appareil photo argentique pour Android, dans `camera/` |
-| `android` | L'éditeur de Develop sur Android (en cours) |
+| `android` | L'éditeur de Develop sur Android (bêta) |
 
 Chaque branche d'application part de `main`, donc les corrections du moteur les atteignent toutes.
 
@@ -127,19 +127,25 @@ avec diffusion ; ces noyaux sont corrigés sur `main`. Les étapes de compilatio
 
 ## L'éditeur de Develop sur Android
 
-Un portage de l'éditeur Linux sur Android, sur la branche `android`. Il garde la disposition de bureau, avec des
-corrections pour le tactile. Il n'est pas encore prêt à l'emploi.
+Un portage de l'éditeur Linux sur Android, sur la branche `android`, en bêta. Il garde la disposition de bureau,
+avec une disposition à lui pour l'écran étroit d'un téléphone et des corrections pour le tactile. Il ouvre et
+retouche les photos (RAW compris) avec les 130 films et exporte dans `Pictures/Develop`. Il ne demande aucune
+autorisation et n'a pas accès au réseau. La correction d'objectif n'est pas encore disponible sur Android.
 
 ## Installation
 
 Téléchargez le `.deb` ou le snap depuis la [dernière version](https://github.com/jegly/Develop/releases/latest), puis installez l'un des deux :
 
 ```sh
-sudo apt install ./Develop_1.0.0_amd64.deb
-sudo snap install --dangerous ./develop_1.0.0_amd64.snap
+sudo apt install ./Develop_1.1.0_amd64.deb
+sudo snap install --dangerous ./develop_1.1.0_amd64.snap
 ```
 
 Le snap a besoin de `--dangerous` parce qu'il est installé depuis un fichier, et non depuis le Snap Store. Vous pouvez aussi le compiler depuis les sources (ci-dessous).
+
+Les applications Android sont dans la même version : `DevelopCamera-…-PQC-signed.apk` et
+`DevelopAndroid-…-PQC-signed.apk`. Elles demandent Android 17 sur un téléphone Arm 64 bits avec Vulkan et n'ont été
+testées que sur un Pixel 11 Pro Fold.
 
 Develop a besoin d'un GPU avec un pilote Vulkan. Il a été développé sous Ubuntu 26.04 avec une carte graphique Intel
 (Mesa). Le `.deb` installe `libvulkan1`, `liblensfun1`, `liblensfun-data-v1`, `fonts-urw-base35`,

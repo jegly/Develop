@@ -103,7 +103,7 @@ equipo.
 |---|---|
 | `main` | Develop para Linux, y el motor sobre el que se construyen todas las aplicaciones |
 | `camera` | Develop Camera: una cámara de película para Android, en `camera/` |
-| `android` | El editor de Develop en Android (en desarrollo) |
+| `android` | El editor de Develop en Android (beta) |
 
 Cada rama de aplicación parte de `main`, así que las correcciones del motor llegan a todas.
 
@@ -125,19 +125,24 @@ con difusión; esos kernels están corregidos en `main`. Los pasos de compilaci�
 
 ## El editor de Develop en Android
 
-Un port del editor de Linux a Android, en la rama `android`. Mantiene la disposición de escritorio, con ajustes para el
-uso táctil. Todavía no está listo para usarse.
+Un port del editor de Linux a Android, en la rama `android`, en beta. Mantiene la disposición de escritorio, con una
+disposición propia para la pantalla estrecha de un teléfono y ajustes para el uso táctil. Abre y edita fotografías
+(RAW incluidos) con las 130 películas y exporta a `Pictures/Develop`. No pide ningún permiso y no tiene acceso a la
+red. La corrección de objetivo aún no está disponible en Android.
 
 ## Instalación
 
 Descarga el `.deb` o el snap de la [última versión](https://github.com/jegly/Develop/releases/latest) e instala uno de los dos:
 
 ```sh
-sudo apt install ./Develop_1.0.0_amd64.deb
-sudo snap install --dangerous ./develop_1.0.0_amd64.snap
+sudo apt install ./Develop_1.1.0_amd64.deb
+sudo snap install --dangerous ./develop_1.1.0_amd64.snap
 ```
 
 El snap necesita `--dangerous` porque se instala desde un archivo, no desde la Snap Store. También puedes compilarlo desde el código fuente (abajo).
+
+Las apps de Android están en la misma versión: `DevelopCamera-…-PQC-signed.apk` y `DevelopAndroid-…-PQC-signed.apk`.
+Necesitan Android 17 en un teléfono Arm de 64 bits con Vulkan y solo se han probado en un Pixel 11 Pro Fold.
 
 Develop necesita una GPU con un controlador Vulkan. Se ha desarrollado en Ubuntu 26.04 con gráficos Intel (Mesa). El
 `.deb` instala `libvulkan1`, `liblensfun1`, `liblensfun-data-v1`, `fonts-urw-base35`, `fonts-liberation-sans-narrow` y

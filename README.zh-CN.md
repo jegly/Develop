@@ -86,7 +86,7 @@ Develop 无法访问互联网。在其他任何东西启动之前安装的 secco
 |---|---|
 | `main` | Linux 版 Develop，以及所有应用都基于的引擎 |
 | `camera` | Develop Camera：Android 上的胶片相机，位于 `camera/` |
-| `android` | Android 上的 Develop 编辑器（开发中） |
+| `android` | Android 上的 Develop 编辑器（测试版） |
 
 每个应用分支都从 `main` 开始，因此引擎修复会到达所有分支。
 
@@ -106,18 +106,20 @@ Develop 无法访问互联网。在其他任何东西启动之前安装的 secco
 
 ## Android 上的 Develop 编辑器
 
-Linux 编辑器到 Android 的移植，位于 `android` 分支。它保留桌面布局，并针对触控做了修正。目前还不能使用。
+Linux 编辑器到 Android 的移植，位于 `android` 分支，目前为测试版。它保留桌面布局，并为手机的窄屏提供了专门的布局，还针对触控做了修正。它能用全部 130 种胶片打开和编辑照片（包括 RAW），并导出到 `Pictures/Develop`。它不申请任何权限，也不联网。Android 上暂时还没有镜头校正。
 
 ## 安装
 
 从[最新发布版本](https://github.com/jegly/Develop/releases/latest)下载 `.deb` 或 snap，然后安装其中之一：
 
 ```sh
-sudo apt install ./Develop_1.0.0_amd64.deb
-sudo snap install --dangerous ./develop_1.0.0_amd64.snap
+sudo apt install ./Develop_1.1.0_amd64.deb
+sudo snap install --dangerous ./develop_1.1.0_amd64.snap
 ```
 
 snap 需要 `--dangerous`，因为它是从文件安装的，而不是从 Snap Store。也可以从源码构建（见下文）。
+
+Android 应用也在同一个版本中：`DevelopCamera-…-PQC-signed.apk` 和 `DevelopAndroid-…-PQC-signed.apk`。它们需要搭载 Vulkan 的 64 位 Arm 手机和 Android 17，目前只在 Pixel 11 Pro Fold 上测试过。
 
 Develop 需要带 Vulkan 驱动的 GPU。它在 Ubuntu 26.04 和 Intel 显卡（Mesa）上开发。`.deb` 会拉取 `libvulkan1`、`liblensfun1`、
 `liblensfun-data-v1`、`fonts-urw-base35`、`fonts-liberation-sans-narrow` 和 `fonts-dejavu-core`。snap 自带这些的副本。

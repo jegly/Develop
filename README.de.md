@@ -103,7 +103,7 @@ Konten. Deine Fotos verlassen nie deinen Rechner.
 |---|---|
 | `main` | Develop für Linux und die Engine, auf der jede App aufbaut |
 | `camera` | Develop Camera: eine Filmkamera für Android, in `camera/` |
-| `android` | Der Editor von Develop auf Android (in Arbeit) |
+| `android` | Der Editor von Develop auf Android (Beta) |
 
 Jeder App-Branch beginnt bei `main`, sodass Engine-Korrekturen alle erreichen.
 
@@ -125,19 +125,24 @@ Weichzeichner schwarz wurde; diese Kernels sind auf `main` behoben. Die Bauanlei
 
 ## Der Editor von Develop auf Android
 
-Eine Portierung des Linux-Editors auf Android, im Branch `android`. Sie behält das Desktop-Layout bei, mit Anpassungen für
-Touch. Sie ist noch nicht einsatzbereit.
+Eine Portierung des Linux-Editors auf Android, im Branch `android`, als Beta. Sie behält das Desktop-Layout bei, mit
+einem eigenen Layout für den schmalen Bildschirm eines Handys und Anpassungen für Touch. Sie öffnet und bearbeitet
+Fotos (auch RAW) mit allen 130 Filmen und exportiert nach `Pictures/Develop`. Sie fragt nach keinen Berechtigungen
+und hat keinen Netzwerkzugriff. Die Objektivkorrektur gibt es auf Android noch nicht.
 
 ## Installation
 
 Lade das `.deb` oder den Snap aus dem [neuesten Release](https://github.com/jegly/Develop/releases/latest) herunter und installiere eins davon:
 
 ```sh
-sudo apt install ./Develop_1.0.0_amd64.deb
-sudo snap install --dangerous ./develop_1.0.0_amd64.snap
+sudo apt install ./Develop_1.1.0_amd64.deb
+sudo snap install --dangerous ./develop_1.1.0_amd64.snap
 ```
 
 Der Snap braucht `--dangerous`, weil er aus einer Datei installiert wird und nicht aus dem Snap Store. Oder baue es aus dem Quellcode (siehe unten).
+
+Die Android-Apps sind im selben Release: `DevelopCamera-…-PQC-signed.apk` und `DevelopAndroid-…-PQC-signed.apk`. Sie
+brauchen Android 17 auf einem 64-Bit-Arm-Handy mit Vulkan und wurden nur auf einem Pixel 11 Pro Fold getestet.
 
 Develop braucht eine GPU mit Vulkan-Treiber. Entwickelt wurde es unter Ubuntu 26.04 mit Intel-Grafik (Mesa). Das `.deb`
 zieht `libvulkan1`, `liblensfun1`, `liblensfun-data-v1`, `fonts-urw-base35`, `fonts-liberation-sans-narrow` und
