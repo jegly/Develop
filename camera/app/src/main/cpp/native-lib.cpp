@@ -143,7 +143,7 @@ JNIEXPORT jobject JNICALL
 Java_com_jegly_developcamera_engine_DevelopEngine_nativeDevelopRaw(
     JNIEnv* env, jobject, jlong handle, jobject raw, jint w, jint h, jint rowStride, jint cfa, jfloatArray jblack,
     jfloat white, jfloatArray jneutral, jfloatArray jforward, jfloatArray jshading, jint gw, jint gh,
-    jfloatArray jdistortion, jfloatArray jintrinsics, jfloat cropAspect, jint maxPixels, jfloat gain,
+    jfloatArray jdistortion, jfloatArray jintrinsics, jfloatArray jnoise, jfloat cropAspect, jint maxPixels, jfloat gain,
     jfloat previewMedian, jstring params) {
     RawInput in;
     in.base = static_cast<const uint8_t*>(env->GetDirectBufferAddress(raw));
@@ -151,6 +151,7 @@ Java_com_jegly_developcamera_engine_DevelopEngine_nativeDevelopRaw(
     in.black = floats(env, jblack); in.white = white; in.neutral = floats(env, jneutral); in.fwd = floats(env, jforward);
     in.shading = floats(env, jshading); in.gw = gw; in.gh = gh;
     in.dist = floats(env, jdistortion); in.intr = floats(env, jintrinsics);
+    in.noise = floats(env, jnoise);   // null: no noise cleanup (Settings)
     in.cropAspect = cropAspect; in.maxPixels = maxPixels; in.gain = gain; in.previewMedian = previewMedian;
     if (!(gain > 0 && previewMedian > 0)) in.targetMedian = 0.18f;   // no meter reading: median to mid grey
     int ow = 0, oh = 0;
@@ -166,13 +167,14 @@ JNIEXPORT jobject JNICALL
 Java_com_jegly_developcamera_engine_DevelopEngine_nativeRawToBitmap(
     JNIEnv* env, jobject, jobject raw, jint w, jint h, jint rowStride, jint cfa, jfloatArray jblack, jfloat white,
     jfloatArray jneutral, jfloatArray jforward, jfloatArray jshading, jint gw, jint gh, jfloatArray jdistortion,
-    jfloatArray jintrinsics, jfloat cropAspect, jint maxPixels, jfloat gain, jfloat previewMedian) {
+    jfloatArray jintrinsics, jfloatArray jnoise, jfloat cropAspect, jint maxPixels, jfloat gain, jfloat previewMedian) {
     RawInput in;
     in.base = static_cast<const uint8_t*>(env->GetDirectBufferAddress(raw));
     in.w = w; in.h = h; in.rowStride = rowStride; in.cfa = cfa;
     in.black = floats(env, jblack); in.white = white; in.neutral = floats(env, jneutral); in.fwd = floats(env, jforward);
     in.shading = floats(env, jshading); in.gw = gw; in.gh = gh;
     in.dist = floats(env, jdistortion); in.intr = floats(env, jintrinsics);
+    in.noise = floats(env, jnoise);   // null: no noise cleanup (Settings)
     in.cropAspect = cropAspect; in.maxPixels = maxPixels; in.gain = gain; in.previewMedian = previewMedian;
     if (!(gain > 0 && previewMedian > 0)) in.targetMedian = 0.18f;
     int ow = 0, oh = 0;

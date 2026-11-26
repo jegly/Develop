@@ -376,6 +376,9 @@ class CameraController(context: Context) {
             shading = shading, shadingW = map?.columnCount ?: 0, shadingH = map?.rowCount ?: 0,
             distortion = c.get(CameraCharacteristics.LENS_DISTORTION)?.takeIf { it.size == 5 },
             intrinsics = c.get(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION)?.takeIf { it.size == 5 },
+            // This frame's noise model, (S, O) per CFA channel in the layout's order = 2x2 position order.
+            noise = r.get(CaptureResult.SENSOR_NOISE_PROFILE)?.takeIf { it.size == 4 }
+                ?.flatMap { listOf(it.first.toFloat(), it.second.toFloat()) }?.toFloatArray(),
         )
     }
 

@@ -34,6 +34,7 @@ class RawFrame(
     val shadingH: Int,
     val distortion: FloatArray?,   // k1 k2 k3 p1 p2
     val intrinsics: FloatArray?,   // fx fy cx cy s
+    val noise: FloatArray? = null, // 8: SENSOR_NOISE_PROFILE (S, O) per 2x2 position (row * 2 + column)
 )
 
 /**
@@ -41,6 +42,11 @@ class RawFrame(
  * for the app's life, used only from [dispatcher]'s single thread.
  */
 object DevelopEngine {
+    /** Settings (CameraScreen keeps these current). Off: RAW frames are developed exactly as before. */
+    @Volatile var cleanSensorNoise = false
+    /** Settings > Film grain. Off: no grain in the developed photo (and none in the viewfinder). */
+    @Volatile var filmGrain = true
+
     /** Every engine call runs here, one at a time. */
     val dispatcher = Executors.newSingleThreadExecutor { r -> Thread(r, "develop-engine") }.asCoroutineDispatcher()
 
@@ -99,7 +105,7 @@ object DevelopEngine {
                 return nativeDevelopRaw(
                     h, raw.data, raw.width, raw.height, raw.rowStride, raw.cfa, raw.black, raw.white, raw.neutral,
                     raw.forward, raw.shading, raw.shadingW, raw.shadingH, raw.distortion, raw.intrinsics,
-                    cropAspect.toFloat(), max.toInt(), gain, previewMedian, params,
+                    raw.noise?.takeIf { cleanSensorNoise }, cropAspect.toFloat(), max.toInt(), gain, previewMedian, params,
                 )
             } catch (e: RuntimeException) {
                 if (attempt == 2 || e.message?.contains("maxStorageBufferRange") != true) throw e
@@ -115,7 +121,8 @@ object DevelopEngine {
         library
         return nativeRawToBitmap(
             raw.data, raw.width, raw.height, raw.rowStride, raw.cfa, raw.black, raw.white, raw.neutral, raw.forward,
-            raw.shading, raw.shadingW, raw.shadingH, raw.distortion, raw.intrinsics, cropAspect, Int.MAX_VALUE, gain, previewMedian,
+            raw.shading, raw.shadingW, raw.shadingH, raw.distortion, raw.intrinsics, raw.noise?.takeIf { cleanSensorNoise },
+            cropAspect, Int.MAX_VALUE, gain, previewMedian,
         )
     }
 
@@ -147,7 +154,8 @@ object DevelopEngine {
             put("density_curve_gamma", pushGamma(s.push))
             put("film_format_mm", s.format.filmMm * s.grainSize.factor)   // grain size (Settings.kt GrainSize)
             val grain = s.grain * (if (s.push > 0) 1.0 + 0.2 * s.push else 1.0)
-            put("grain_active", grain > 0.0); put("grain_amount", grain.coerceIn(0.0, 2.0))
+            // Settings > Film grain off: the film's colour, contrast and sharpness without its grain.
+            put("grain_active", filmGrain && grain > 0.0); put("grain_amount", grain.coerceIn(0.0, 2.0))
             put("halation_active", s.halation > 0.0); put("halation_amount", s.halation.coerceIn(0.0, 4.0))
             val d = s.diffusion
             put("diffusion_filter_active", d != null)
@@ -205,12 +213,13 @@ object DevelopEngine {
     private external fun nativeDevelopRaw(
         engine: Long, raw: ByteBuffer, w: Int, h: Int, rowStride: Int, cfa: Int, black: FloatArray, white: Float,
         neutral: FloatArray, forward: FloatArray, shading: FloatArray, gw: Int, gh: Int, distortion: FloatArray?,
-        intrinsics: FloatArray?, cropAspect: Float, maxPixels: Int, gain: Float, previewMedian: Float, params: String,
+        intrinsics: FloatArray?, noise: FloatArray?, cropAspect: Float, maxPixels: Int, gain: Float, previewMedian: Float,
+        params: String,
     ): Bitmap
     private external fun nativeRawToBitmap(
         raw: ByteBuffer, w: Int, h: Int, rowStride: Int, cfa: Int, black: FloatArray, white: Float, neutral: FloatArray,
         forward: FloatArray, shading: FloatArray, gw: Int, gh: Int, distortion: FloatArray?, intrinsics: FloatArray?,
-        cropAspect: Float, maxPixels: Int, gain: Float, previewMedian: Float,
+        noise: FloatArray?, cropAspect: Float, maxPixels: Int, gain: Float, previewMedian: Float,
     ): Bitmap
 }
 

@@ -37,6 +37,8 @@ data class AppSettings(
     val level: Boolean = false,
     val peaking: Boolean = false,
     val histogram: Boolean = false,
+    val cleanSensorNoise: Boolean = false, // off: RAW frames developed exactly as before
+    val filmGrain: Boolean = true,
 )
 
 /** Settings, laid out as in the mockup: a page of short rows with small toggles, grouped. */
@@ -68,6 +70,15 @@ fun SettingsScreen(
                 ToggleRow("Level", s.level) { onChange(s.copy(level = it)) }
                 ToggleRow("Focus peaking", s.peaking, "Outlines what is in focus") { onChange(s.copy(peaking = it)) }
                 ToggleRow("Histogram", s.histogram) { onChange(s.copy(histogram = it)) }
+            }
+            SectionLabel("Development")
+            Group {
+                ToggleRow("Film grain", s.filmGrain, "Off: the film's colour and contrast without its grain") {
+                    onChange(s.copy(filmGrain = it))
+                }
+                ToggleRow("Clean sensor noise", s.cleanSensorNoise, "Lightly, before the film: helps the 13 mm lens indoors") {
+                    onChange(s.copy(cleanSensorNoise = it))
+                }
             }
             SectionLabel("Photos")
             Group {
