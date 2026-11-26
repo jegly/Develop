@@ -8,6 +8,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -61,12 +62,45 @@ fun GearIcon(color: Color, size: Dp = 20.dp) = Canvas(Modifier.size(size)) {
     }
 }
 
+/**
+ * Front/back camera: a camera with two arrows going round it (jegly's pick "B", 2026-11-26). [hole] is the
+ * colour behind the icon, for the lens.
+ */
 @Composable
-fun FlipIcon(color: Color, size: Dp = 20.dp) = Canvas(Modifier.size(size)) {
-    val s = this.size.minDimension
-    val w = s * 0.09f
-    drawArc(color, 200f, 220f, false, Offset(s * 0.15f, s * 0.15f), Size(s * 0.7f, s * 0.7f), style = Stroke(w))
-    // arrow head at the arc's end
-    drawLine(color, Offset(s * 0.18f, s * 0.42f), Offset(s * 0.06f, s * 0.3f), strokeWidth = w)
-    drawLine(color, Offset(s * 0.18f, s * 0.42f), Offset(s * 0.3f, s * 0.3f), strokeWidth = w)
+fun FlipIcon(color: Color, hole: Color, size: Dp = 28.dp) = Canvas(Modifier.size(size)) {
+    val u = this.size.minDimension * 0.86f   // the drawing's unit (the mockup's 24 dp icon)
+    val c = center
+    val w = u * 0.075f
+    // The body, its top and the lens.
+    val bw = u * 0.46f
+    val bh = u * 0.32f
+    val top = c.y - bh / 2 + u * 0.02f
+    drawRoundRect(color, Offset(c.x - bw / 2, top), Size(bw, bh), CornerRadius(u * 0.05f))
+    drawRect(color, Offset(c.x - bw * 0.18f, top - u * 0.05f), Size(bw * 0.36f, u * 0.07f))
+    val lens = Offset(c.x, c.y + u * 0.02f)
+    drawCircle(hole, u * 0.09f, lens)
+    drawCircle(color, u * 0.025f, lens)
+    // Two arrows round it, clockwise, each with its head at its end.
+    val r = u * 0.47f
+    val head = u * 0.11f
+    for (start in floatArrayOf(205f, 25f)) {
+        val sweep = 60f
+        drawArc(color, start, sweep, false, Offset(c.x - r, c.y - r), Size(2 * r, 2 * r), style = Stroke(w))
+        val t = Math.toRadians((start + sweep).toDouble())
+        val ex = c.x + r * cos(t).toFloat()
+        val ey = c.y + r * sin(t).toFloat()
+        val tx = -sin(t).toFloat()   // the direction of travel at the end
+        val ty = cos(t).toFloat()
+        val nx = cos(t).toFloat()
+        val ny = sin(t).toFloat()
+        drawPath(
+            Path().apply {
+                moveTo(ex + tx * head, ey + ty * head)
+                lineTo(ex - tx * head * 0.2f + nx * head * 0.8f, ey - ty * head * 0.2f + ny * head * 0.8f)
+                lineTo(ex - tx * head * 0.2f - nx * head * 0.8f, ey - ty * head * 0.2f - ny * head * 0.8f)
+                close()
+            },
+            color,
+        )
+    }
 }

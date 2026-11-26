@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <thread>
 
 namespace {
 // Camera2's CFA arrangements: which colour sits at (x & 1, y & 1). 0 R, 1 G, 2 B.
@@ -15,7 +17,90 @@ int cfa_colour(int cfa, int x, int y) {
     };
     return kLayout[cfa & 3][(y & 1) * 2 + (x & 1)];
 }
+
+// Marks a saturated site in the mosaic (signals can be a little below 0: noise around black).
+constexpr float kSaturated = std::numeric_limits<float>::infinity();
+// How far the cleanup moves each site to its neighbours' average (clean_sensor_noise).
+constexpr float kCleanAmount = 0.5f;
+
+// Rows [0, h) shared among the phone's cores.
+template <class F>
+void rows_in_parallel(int h, F f) {
+    const int n = std::clamp(int(std::thread::hardware_concurrency()), 1, 8);
+    std::vector<std::thread> t;
+    for (int i = 1; i < n; ++i) t.emplace_back([=] { f(h * i / n, h * (i + 1) / n); });
+    f(0, h / n);
+    for (auto& x : t) x.join();
+}
 }  // namespace
+
+void clean_sensor_noise(std::vector<float>& m, int w, int h, const std::vector<float>& noise, float amount) {
+    if (noise.size() != 8 || w < 8 || h < 8 || m.size() != size_t(w) * h || !(amount > 0)) return;
+    // Same-colour neighbours are 2 sites apart. Spatial weights over 5 x 5 of them (sigma 0.7 of them); a site's
+    // neighbour counts only while their smoothed signals differ by about its noise or less (range sigma 0.6 noise).
+    // "Lighter", jegly's pick on Fold DNGs (2026-11-26): with kCleanAmount 0.5 the 13 mm wall's noise 4.5 -> 3.1
+    // levels, the 23 mm painting's texture and the speaker grille kept.
+    constexpr int R = 2;
+    constexpr float kSpatial = 0.7f, kRange = 0.6f;
+    float ws[2 * R + 1][2 * R + 1];
+    for (int j = -R; j <= R; ++j)
+        for (int i = -R; i <= R; ++i) ws[j + R][i + R] = std::exp(-float(i * i + j * j) / (2 * kSpatial * kSpatial));
+    constexpr int kLut = 512;
+    constexpr float kLutMax = 8.0f;   // exp(-8) ~ 0: beyond it a neighbour is another surface
+    float lut[kLut + 1];
+    for (int i = 0; i <= kLut; ++i) lut[i] = std::exp(-kLutMax * float(i) / kLut);
+    const std::vector<float> src = m;
+
+    // The guide: each site's 3 x 3 same-colour mean (noise a third), so the range test isn't fooled by noise.
+    std::vector<float> guide(src.size());
+    rows_in_parallel(h, [&](int y0, int y1) {
+        for (int y = y0; y < y1; ++y)
+            for (int x = 0; x < w; ++x) {
+                const size_t at = size_t(y) * w + x;
+                if (src[at] == kSaturated) { guide[at] = kSaturated; continue; }
+                float sum = 0;
+                int n = 0;
+                for (int dy = -2; dy <= 2; dy += 2)
+                    for (int dx = -2; dx <= 2; dx += 2) {
+                        const int xx = x + dx, yy = y + dy;
+                        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+                        const float v = src[size_t(yy) * w + xx];
+                        if (v != kSaturated) { sum += v; ++n; }
+                    }
+                guide[at] = sum / float(n);
+            }
+    });
+
+    rows_in_parallel(h, [&](int y0, int y1) {
+        for (int y = y0; y < y1; ++y)
+            for (int x = 0; x < w; ++x) {
+                const size_t at = size_t(y) * w + x;
+                if (src[at] == kSaturated) continue;
+                const int pos = (y & 1) * 2 + (x & 1);
+                const float g = guide[at];
+                const float sigma = std::sqrt(std::max(noise[2 * pos] * std::max(g, 0.0f) + noise[2 * pos + 1], 1e-12f));
+                const float scale = float(kLut) / kLutMax / (2 * kRange * kRange * sigma * sigma);
+                float sum = 0, wsum = 0;
+                for (int j = -R; j <= R; ++j) {
+                    const int yy = y + 2 * j;
+                    if (yy < 0 || yy >= h) continue;
+                    for (int i = -R; i <= R; ++i) {
+                        const int xx = x + 2 * i;
+                        if (xx < 0 || xx >= w) continue;
+                        const size_t b = size_t(yy) * w + xx;
+                        if (src[b] == kSaturated) continue;
+                        const float d = guide[b] - g;
+                        const float u = d * d * scale;
+                        if (u >= kLut) continue;
+                        const float wt = ws[j + R][i + R] * lut[int(u)];
+                        sum += wt * src[b];
+                        wsum += wt;
+                    }
+                }
+                m[at] = src[at] + amount * (sum / wsum - src[at]);   // wsum >= the site's own weight (1)
+            }
+    });
+}
 
 std::vector<float> raw_to_prophoto(const RawInput& in, int& ow, int& oh, std::string& error) {
     const uint8_t* base = in.base;
@@ -39,19 +124,27 @@ std::vector<float> raw_to_prophoto(const RawInput& in, int& ow, int& oh, std::st
     for (float& v : g) v /= gmin;
     const bool shade = shading.size() == size_t(gw) * gh * 4 && gw > 1 && gh > 1;
 
-    // 1. The mosaic: black subtracted, scaled to white, lens shading and white balance applied. Saturated sites
-    //    go to the brightest white so clipped highlights stay neutral.
+    // 1. The mosaic: black subtracted, scaled to white (saturated sites marked -1), the sensor noise cleaned if
+    //    asked (in these, the sensor's own units, which its noise model is in), then lens shading and white balance
+    //    applied. Saturated sites go to the brightest white so clipped highlights stay neutral.
     std::vector<float> m(size_t(w) * h);
     for (int y = 0; y < h; ++y) {
         const auto* row = reinterpret_cast<const uint16_t*>(base + size_t(y) * rowStride);
+        for (int x = 0; x < w; ++x) {
+            const float b = black[(y & 1) * 2 + (x & 1)];
+            const float v = (float(row[x]) - b) / std::max(1.0f, white - b);
+            m[size_t(y) * w + x] = v >= 0.98f ? kSaturated : v;
+        }
+    }
+    clean_sensor_noise(m, w, h, in.noise, kCleanAmount);
+    for (int y = 0; y < h; ++y) {
         const float sy = float(y) / float(h - 1) * float(gh - 1);
         const int y0 = std::min(int(sy), gh - 2);
         const float fy = sy - float(y0);
         for (int x = 0; x < w; ++x) {
             const int col = cfa_colour(cfa, x, y);
-            const float b = black[(y & 1) * 2 + (x & 1)];
-            float v = (float(row[x]) - b) / std::max(1.0f, white - b);
-            if (v >= 0.98f) { m[size_t(y) * w + x] = gmax; continue; }
+            float v = m[size_t(y) * w + x];
+            if (v == kSaturated) { m[size_t(y) * w + x] = gmax; continue; }
             if (shade) {
                 const int ch = col == 0 ? 0 : col == 2 ? 3 : ((y & 1) == 0 ? 1 : 2);
                 const float sx = float(x) / float(w - 1) * float(gw - 1);

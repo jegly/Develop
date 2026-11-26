@@ -132,7 +132,8 @@ fun CameraScreen() {
                 shutterSound = prefs.getBoolean("shutter_sound", false), shutterHaptic = prefs.getBoolean("shutter_haptic", false),
                 grid = prefs.getBoolean("grid", true), level = prefs.getBoolean("level", false),
                 peaking = prefs.getBoolean("peaking", false), histogram = prefs.getBoolean("histogram", false),
-            )
+                cleanSensorNoise = prefs.getBoolean("clean_sensor_noise", false), filmGrain = prefs.getBoolean("film_grain", true),
+            ).also { DevelopEngine.cleanSensorNoise = it.cleanSensorNoise; DevelopEngine.filmGrain = it.filmGrain }
         )
     }
     val controller = remember { CameraController(context) }
@@ -184,7 +185,7 @@ fun CameraScreen() {
     renderer.gain = meterGain
     // Calibrated on a developed photo (Portra 400, grain 1: 4.4 levels std at full size, 2.6 seen whole on the
     // screen, 2026-11-21): the viewfinder shows the grain as the whole photo shows it, not the 100 % grain.
-    renderer.grain = (shownFilm.grain * develop.grain * (if (develop.push > 0) 1.0 + 0.2 * develop.push else 1.0) * 0.0235 *
+    renderer.grain = ((if (app.filmGrain) 1.0 else 0.0) * shownFilm.grain * develop.grain * (if (develop.push > 0) 1.0 + 0.2 * develop.push else 1.0) * 0.0235 *
         Math.pow(1.0 / develop.grainSize.factor, 0.83)).toFloat()   // grain size: measured visibility ~ (35 / mm)^0.83
     renderer.grainCell = (1.0 + (1.0 / develop.grainSize.factor - 1.0) * 0.3).toFloat()
     renderer.monoGrain = shownFilm.kind.startsWith("b&w")
@@ -217,7 +218,10 @@ fun CameraScreen() {
         app = a
         prefs.edit().putBoolean("shutter_sound", a.shutterSound).putBoolean("shutter_haptic", a.shutterHaptic)
             .putBoolean("grid", a.grid).putBoolean("level", a.level).putBoolean("peaking", a.peaking)
-            .putBoolean("histogram", a.histogram).apply()
+            .putBoolean("histogram", a.histogram).putBoolean("clean_sensor_noise", a.cleanSensorNoise)
+            .putBoolean("film_grain", a.filmGrain).apply()
+        DevelopEngine.cleanSensorNoise = a.cleanSensorNoise
+        DevelopEngine.filmGrain = a.filmGrain
     }
 
     // The camera follows the GL surface (recreated after every pause) and the chosen lens.
@@ -448,7 +452,7 @@ fun CameraScreen() {
             }
             RoundButton({ sheet = "develop" }) { ApertureIcon(Vintage.Cream) }
             RoundButton({ lens = if (lens.front) defaultLens else controller.lenses.firstOrNull { it.front } ?: lens }) {
-                FlipIcon(Vintage.Cream)
+                FlipIcon(Vintage.Cream, hole = Vintage.BrownRaised)
             }
         }
         Text(
